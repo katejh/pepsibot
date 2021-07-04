@@ -130,6 +130,23 @@ void prototypeSensors() {
   }
 }
 
+void prototypeReturnVehicleSensing() {
+  // experimentally found values
+  // cardboard is around 30, electrical tape is around 50 or 60, normal light is >100
+  int tape_reading_min = 50;
+  int tape_reading_max = 80;
+  int reading = analogRead(IRSENSOR_RIGHT);
+
+  printToDisplay("Sensor reading: " + String(reading));
+
+  if (reading <= tape_reading_max && reading >= tape_reading_min) {
+    adjustMotor(511);
+  } else {
+    // turn on motor - value chosen randomly for now
+    adjustMotor(600);
+  }
+}
+
 // main
 void setup()
 {
@@ -141,5 +158,5 @@ void setup()
 
 void loop()
 {
-  prototypeSensors();
+  prototypeReturnVehicleSensing();
 }
