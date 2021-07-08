@@ -6,9 +6,9 @@
 #define IRSENSOR_LEFT PA_7
 
 // PID adjustor
-#define K_P PA_3
-#define K_I PA_4
-#define K_D PA_5
+#define K_P PA_2
+#define K_I PA_3
+#define K_D PA_4
 
 // motor
 #define MOTOR_A PA_0
