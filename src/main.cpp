@@ -2,13 +2,14 @@
 #include <Adafruit_SSD1306.h>
 
 // IR sensor
-#define IRSENSOR_RIGHT PA_6
-#define IRSENSOR_LEFT PA_7
+#define TAPESENSOR_LEFT PA_5
+#define TAPESENSOR_MID PA_6
+#define TAPESENSOR_RIGHT PA_7
 
 // PID adjustor
-#define K_P PA_3
-#define K_I PA_4
-#define K_D PA_5
+#define K_P PA_2
+#define K_I PA_3
+#define K_D PA_4
 
 // motor
 #define MOTOR_A PA_0
@@ -29,10 +30,11 @@ void printToDisplay(String text)
   display.display();
 }
 
-void setupIRSensors()
+void setupTapeSensors()
 {
-  pinMode(IRSENSOR_LEFT, INPUT_ANALOG);
-  pinMode(IRSENSOR_RIGHT, INPUT_ANALOG);
+  pinMode(TAPESENSOR_LEFT, INPUT_ANALOG);
+  pinMode(TAPESENSOR_MID, INPUT_ANALOG);
+  pinMode(TAPESENSOR_RIGHT, INPUT_ANALOG);
 }
 
 void setupDisplay()
@@ -78,8 +80,8 @@ int max_i = 100;
 void pidTime()
 {
   // this algorithm sucks sorry
-  int reading_left = analogRead(IRSENSOR_LEFT);
-  int reading_right = analogRead(IRSENSOR_RIGHT);
+  int reading_left = analogRead(TAPESENSOR_MID);
+  int reading_right = analogRead(TAPESENSOR_LEFT);
   // int set = 500;
 
   int error = 0; // reading - set;
@@ -109,31 +111,25 @@ void pidTime()
  * Function for prototyping the tape reading sensors
  */
 void prototypeSensors() {
-  int reading_left = analogRead(IRSENSOR_LEFT);
-  int reading_right = analogRead(IRSENSOR_RIGHT);
+  int reading_left = analogRead(TAPESENSOR_LEFT);
+  int reading_mid = analogRead(TAPESENSOR_MID);
+  int reading_right = analogRead(TAPESENSOR_RIGHT);
 
   // experimentally found normal around 30 tape around 40
   // subject to change for later tests
   int tape_reading_threshold = 40;
 
   printToDisplay(
-    "Left sensor: " + String(reading_left) 
+    "Left sensor: " + String(reading_left)
+    + "\nMid sensor: " + String(reading_mid) 
     + "\nRight sensor: " + String(reading_right)
   );
-
-  if (reading_left >= tape_reading_threshold) {
-    // do something lol
-  } else if (reading_right >= tape_reading_threshold) {
-    // do something lol
-  } else {
-    adjustMotor(511);
-  }
 }
 
 // main
 void setup()
 {
-  setupIRSensors();
+  setupTapeSensors();
   setupMotor();
   // make sure setupDisplay is last because for some reason you gotta call it after all pinModes are done 
   setupDisplay(); 
