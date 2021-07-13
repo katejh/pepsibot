@@ -92,6 +92,7 @@ void adjustLeftMotor(int value)
   int offset = 210; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
   int actual_value = value + offset;
   if (actual_value > 1023) actual_value = 1023;
+  if (actual_value < 0) actual_value = 0;
   pwm_start(MOTOR_LA, MOTORFREQ, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
   pwm_start(MOTOR_LB, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
 }
@@ -103,6 +104,7 @@ void adjustRightMotor(int value)
   int offset = 210; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
   int actual_value = value + offset;
   if (actual_value > 1023) actual_value = 1023;
+  if (actual_value < 0) actual_value = 0;
   pwm_start(MOTOR_RA, MOTORFREQ, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
   pwm_start(MOTOR_RB, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
 }
