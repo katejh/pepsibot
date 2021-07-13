@@ -3,13 +3,14 @@
 
 // IR sensor
 #define TAPESENSOR_LEFT PA_0
-#define TAPESENSOR_MID PA_6
 #define TAPESENSOR_RIGHT PA_1
 
 // Potentiometer inputs
 #define PTMT_0 PA_4
 #define PTMT_1 PA_5
 #define PTMT_2 PA_6
+#define PTMT_3 PA_2
+#define PTMT_4 PA_7
 
 // motors
 #define MOTOR_LA PA_8
@@ -35,7 +36,6 @@ void printToDisplay(String text)
 void setupTapeSensors()
 {
   pinMode(TAPESENSOR_LEFT, INPUT_ANALOG);
-  pinMode(TAPESENSOR_MID, INPUT_ANALOG);
   pinMode(TAPESENSOR_RIGHT, INPUT_ANALOG);
 }
 
@@ -62,6 +62,8 @@ void setupPtmtInputs()
   pinMode(PTMT_0, INPUT_ANALOG);
   pinMode(PTMT_1, INPUT_ANALOG);
   pinMode(PTMT_2, INPUT_ANALOG);
+  pinMode(PTMT_3, INPUT_ANALOG);
+  pinMode(PTMT_4, INPUT_ANALOG);
 }
 
 /*
@@ -111,8 +113,8 @@ void adjustRightMotor(int value)
  */ 
 bool isTapeReadingValue(int reading)
 {
-  int tape_value_min = 35; // check this value before running the code
-  int tape_value_max = 45; // check this value before running the code
+  int tape_value_min = analogRead(PTMT_3); // check this value before running the code
+  int tape_value_max = analogRead(PTMT_4); // check this value before running the code
 
   if (reading >= tape_value_min && reading <= tape_value_max){
     return true;
@@ -127,7 +129,7 @@ int last_error_timesteps = 0;
 int current_error_timesteps = 0;
 void prototypeTapeFollowingPid()
 {
-  int neutral_motor_value = 100; // regular speed for motor while driving straight
+  int neutral_motor_value = 200; // regular speed for motor while driving straight
 
   int reading_left = analogRead(TAPESENSOR_LEFT);
   int reading_right = analogRead(TAPESENSOR_RIGHT);
@@ -175,7 +177,8 @@ void prototypeTapeFollowingPid()
   last_error = error;
 
   printToDisplay(
-    "L:" + String(reading_left) + " R:" + String(reading_right) + "\n"
+    "min:" + String(analogRead(PTMT_3)) + " max:" + String(analogRead(PTMT_4)) + "\n"
+    + "L:" + String(reading_left) + " R:" + String(reading_right) + "\n"
     + "k_p:" + String(k_p) + " k_i:" + String(k_i) + " k_d:" + String(k_d) + "\n"
     + "p:" + String(p) + " i:" + String(i) + " d:" + String(d) + "\n"
     + "Error:" + String(error)
@@ -187,7 +190,6 @@ void prototypeTapeFollowingPid()
  */
 void prototypeSensors() {
   int reading_left = analogRead(TAPESENSOR_LEFT);
-  int reading_mid = analogRead(TAPESENSOR_MID);
   int reading_right = analogRead(TAPESENSOR_RIGHT);
 
   // experimentally found normal around 30 tape around 40
@@ -196,7 +198,6 @@ void prototypeSensors() {
 
   printToDisplay(
     "Left sensor: " + String(reading_left)
-    + "\nMid sensor: " + String(reading_mid) 
     + "\nRight sensor: " + String(reading_right)
   );
 }
