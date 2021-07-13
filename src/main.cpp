@@ -2,18 +2,21 @@
 #include <Adafruit_SSD1306.h>
 
 // IR sensor
-#define IRSENSOR_RIGHT PA_6
-#define IRSENSOR_LEFT PA_7
+#define IRSENSOR_FRONT PA_6
+#define IRSENSOR_BACK PA_7
 
-// PID adjustor
-#define K_P PA_2
-#define K_I PA_3
-#define K_D PA_4
+// comparators (for checking if rv sensors are within a certain range)
+#define FRONT_COMPARATOR PB13
+#define BACK_COMPARATOR PB12
 
 // motor
-#define MOTOR_A PA_0
-#define MOTOR_B PA_1
+#define MOTOR_A PA_8
+#define MOTOR_B PA_9
 #define MOTORFREQ 100
+
+// sending tape values to comparators
+#define TAPE_VAL_MIN_PIN PA_2
+#define TAPE_VAL_MAX_PIN PA_3
 
 // display
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -29,10 +32,12 @@ void printToDisplay(String text)
   display.display();
 }
 
-void setupIRSensors()
+void setupReturnVehicleSensors()
 {
-  pinMode(IRSENSOR_LEFT, INPUT_ANALOG);
-  pinMode(IRSENSOR_RIGHT, INPUT_ANALOG);
+  pinMode(IRSENSOR_BACK, INPUT_ANALOG);
+  pinMode(IRSENSOR_FRONT, INPUT_ANALOG);
+  pinMode(FRONT_COMPARATOR, INPUT_PULLUP);
+  pinMode(BACK_COMPARATOR, INPUT_PULLUP);
 }
 
 void setupDisplay()
@@ -49,6 +54,12 @@ void setupMotor()
 {
   pinMode(MOTOR_A, OUTPUT);
   pinMode(MOTOR_B, OUTPUT);
+}
+
+void setupTapeValuePins()
+{
+  pinMode(TAPE_VAL_MIN_PIN, INPUT_ANALOG);
+  pinMode(TAPE_VAL_MAX_PIN, INPUT_ANALOG);
 }
 
 /**
@@ -70,47 +81,12 @@ void adjustMotor(int adjust)
   }
 }
 
-/*
-int last_error = 0;
-int last_i = 0;
-int max_i = 100;
-
-void pidTime()
-{
-  // this algorithm sucks sorry
-  int reading_left = analogRead(IRSENSOR_LEFT);
-  int reading_right = analogRead(IRSENSOR_RIGHT);
-  // int set = 500;
-
-  int error = 0; // reading - set;
-  last_error = error;
-
-  int kp = 1;
-  int ki = 0;
-  int kd = 1;
-
-  int p = kp*error;
-  int i = ki*error + last_i;
-  if (i > max_i) {
-    i = max_i;
-  } else if (i < -max_i) {
-    i = -max_i;
-  }
-  last_i = i;
-  int d = kd*(error-last_error);
-
-  int g = p+i+d;
-
-  adjustMotor(g + 511);
-}
-*/
-
 /**
  * Function for prototyping the tape reading sensors
  */
 void prototypeSensors() {
-  int reading_left = analogRead(IRSENSOR_LEFT);
-  int reading_right = analogRead(IRSENSOR_RIGHT);
+  int reading_left = analogRead(IRSENSOR_BACK);
+  int reading_right = analogRead(IRSENSOR_FRONT);
 
   // experimentally found normal around 30 tape around 40
   // subject to change for later tests
@@ -132,31 +108,41 @@ void prototypeSensors() {
 
 void prototypeReturnVehicleSensing() {
   // experimentally found values
-  // cardboard is around 30, electrical tape is around 50 or 60, normal light is >100
-  int tape_reading_min = 50;
-  int tape_reading_max = 80;
-  int reading = analogRead(IRSENSOR_RIGHT);
+  int reading_front = analogRead(IRSENSOR_FRONT);
+  int reading_back = analogRead(IRSENSOR_BACK);
+  int reading_front_comp = digitalRead(FRONT_COMPARATOR);
+  int reading_back_comp = digitalRead(BACK_COMPARATOR);
+  int tape_val_min = analogRead(TAPE_VAL_MIN_PIN);
+  int tape_val_max = analogRead(TAPE_VAL_MAX_PIN);
 
-  printToDisplay("Sensor reading: " + String(reading));
+  printToDisplay("Front sensor: " + String(reading_front) 
+    + "\nBack sensor: " + String(reading_back)
+    + "\nFront comparator: " + String(reading_front_comp)
+    + "\nBack comparator: " + String(reading_back_comp)
+    + "\nMin: " + String(tape_val_min) + " Max: " + String(tape_val_max)
+  );
 
-  if (reading <= tape_reading_max && reading >= tape_reading_min) {
+  if (reading_front_comp == LOW && reading_back_comp == LOW) {
     adjustMotor(511);
-  } else {
-    // turn on motor - value chosen randomly for now
-    adjustMotor(600);
   }
+
+  // wait 3 seconds
+  delay(3000);
 }
 
 // main
 void setup()
 {
-  setupIRSensors();
+  setupReturnVehicleSensors();
   setupMotor();
   // make sure setupDisplay is last because for some reason you gotta call it after all pinModes are done 
-  setupDisplay(); 
+  setupDisplay();
+
+  // interrupts
+  attachInterrupt(digitalPinToInterrupt(FRONT_COMPARATOR), prototypeReturnVehicleSensing, LOW);
 }
 
 void loop()
 {
-  prototypeReturnVehicleSensing();
+  adjustMotor(600);
 }
