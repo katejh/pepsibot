@@ -5,19 +5,33 @@
 #define TAPESENSOR_LEFT PA_0
 #define TAPESENSOR_RIGHT PA_1
 
+#define IRSENSOR_FRONT PA_3
+#define IRSENSOR_BACK PA_7
+
 // Potentiometer inputs
-#define PTMT_0 PA_4
-#define PTMT_1 PA_5
-#define PTMT_2 PA_6
-#define PTMT_3 PA_2
-#define PTMT_4 PA_7
+#define KP_ADJUSTOR PA_4
+#define KI_ADJUSTOR PA_5
+#define KD_ADJUSTOR PA_6
+#define TAPE_BOTTOM_MIN_ADJUSTOR PA_2
 
 // motors
 #define MOTOR_LA PA_8
 #define MOTOR_LB PA_9
 #define MOTOR_RA PA_10
 #define MOTOR_RB PA_11
+
+// comparators (for checking if rv sensors are within a certain range)
+#define FRONT_COMPARATOR PB13
+#define BACK_COMPARATOR PB12
+
+// motor
+#define MOTOR_A PA_8
+#define MOTOR_B PA_9
 #define MOTORFREQ 100
+
+// sending tape values to comparators
+#define TAPE_SIDE_MIN_ADJUSTOR PB0
+#define TAPE_SIDE_MAX_ADJUSTOR PB1
 
 // display
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -39,6 +53,14 @@ void setupTapeSensors()
   pinMode(TAPESENSOR_RIGHT, INPUT_ANALOG);
 }
 
+void setupReturnVehicleSensors()
+{
+  pinMode(IRSENSOR_BACK, INPUT_ANALOG);
+  pinMode(IRSENSOR_FRONT, INPUT_ANALOG);
+  pinMode(FRONT_COMPARATOR, INPUT_PULLUP);
+  pinMode(BACK_COMPARATOR, INPUT_PULLUP);
+}
+
 void setupDisplay()
 {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -49,7 +71,7 @@ void setupDisplay()
   display.display();
 }
 
-void setupMotor()
+void setupMotors()
 {
   pinMode(MOTOR_LA, OUTPUT);
   pinMode(MOTOR_LB, OUTPUT);
@@ -57,16 +79,18 @@ void setupMotor()
   pinMode(MOTOR_RB, OUTPUT);
 }
 
+
 void setupPtmtInputs()
 {
-  pinMode(PTMT_0, INPUT_ANALOG);
-  pinMode(PTMT_1, INPUT_ANALOG);
-  pinMode(PTMT_2, INPUT_ANALOG);
-  pinMode(PTMT_3, INPUT_ANALOG);
-  pinMode(PTMT_4, INPUT_ANALOG);
+  pinMode(KP_ADJUSTOR, INPUT_ANALOG);
+  pinMode(KI_ADJUSTOR, INPUT_ANALOG);
+  pinMode(KD_ADJUSTOR, INPUT_ANALOG);
+  pinMode(TAPE_BOTTOM_MIN_ADJUSTOR, INPUT_ANALOG);
+  pinMode(TAPE_SIDE_MIN_ADJUSTOR, INPUT_ANALOG);
+  pinMode(TAPE_SIDE_MAX_ADJUSTOR, INPUT_ANALOG);
 }
 
-/*
+/**
  * Take a value from 0 - 1023
  * 511 = stop
 void adjustMotor(int adjust)
@@ -113,12 +137,23 @@ void adjustRightMotor(int value)
  * Checks that an analog reading value is potentially tape
  * Expected that input is a normal analog reading of value 0 - 1023
  */ 
-bool isTapeReadingValue(int reading)
+bool isBottomTapeReadingValue(int reading)
 {
-  int tape_value_min = analogRead(PTMT_3); // check this value before running the code
-  int tape_value_max = analogRead(PTMT_4); // check this value before running the code
+  int tape_value_min = analogRead(TAPE_BOTTOM_MIN_ADJUSTOR); // check this value before running the code
 
-  if (reading >= tape_value_min && reading <= tape_value_max){
+  if (reading >= tape_value_min){
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool isSideTapeReadingValue(int reading)
+{
+  int tape_value_min = analogRead(TAPE_SIDE_MIN_ADJUSTOR);
+  int tape_value_max = analogRead(TAPE_SIDE_MAX_ADJUSTOR);
+
+  if (reading >= tape_value_min && reading <= tape_value_max) {
     return true;
   } else {
     return false;
@@ -144,11 +179,11 @@ void prototypeTapeFollowingPid()
   */
 
   int error = 0;
-  if (isTapeReadingValue(reading_left) && isTapeReadingValue(reading_right)){
+  if (isBottomTapeReadingValue(reading_left) && isBottomTapeReadingValue(reading_right)){
     error = 0;
-  } else if (!isTapeReadingValue(reading_left) && isTapeReadingValue(reading_right)) {
+  } else if (!isBottomTapeReadingValue(reading_left) && isBottomTapeReadingValue(reading_right)) {
     error = -1;
-  } else if (isTapeReadingValue(reading_left) && !isTapeReadingValue(reading_right)) {
+  } else if (isBottomTapeReadingValue(reading_left) && !isBottomTapeReadingValue(reading_right)) {
     error = 1;
   } else if (last_error == -1 || last_error == -5) {
     error = -5;
@@ -162,9 +197,9 @@ void prototypeTapeFollowingPid()
   }
   current_error_timesteps++;
 
-  int k_p = analogRead(PTMT_0) * 100 / 1023; // cap it at 100 for now
-  int k_i = analogRead(PTMT_1) * 100 / 1023;
-  int k_d = analogRead(PTMT_2) * 100 / 1023;
+  int k_p = analogRead(KP_ADJUSTOR) * 100 / 1023; // cap it at 100 for now
+  int k_i = analogRead(KI_ADJUSTOR) * 100 / 1023;
+  int k_d = analogRead(KD_ADJUSTOR) * 100 / 1023;
 
   int p = k_p * error;
   int i = k_i * (total_i + error);
@@ -178,13 +213,15 @@ void prototypeTapeFollowingPid()
   total_i += i;
   last_error = error;
 
+  /*
   printToDisplay(
-    "min:" + String(analogRead(PTMT_3)) + " max:" + String(analogRead(PTMT_4)) + "\n"
+    "min:" + String(analogRead(TAPE_BOTTOM_MIN_ADJUSTOR)) + "\n"
     + "L:" + String(reading_left) + " R:" + String(reading_right) + "\n"
     + "k_p:" + String(k_p) + " k_i:" + String(k_i) + " k_d:" + String(k_d) + "\n"
     + "p:" + String(p) + " i:" + String(i) + " d:" + String(d) + "\n"
     + "Error:" + String(error)
   );
+  */
 }
 
 /**
@@ -194,6 +231,10 @@ void prototypeSensors() {
   int reading_left = analogRead(TAPESENSOR_LEFT);
   int reading_right = analogRead(TAPESENSOR_RIGHT);
 
+  int reading_back = analogRead(IRSENSOR_BACK);
+  int reading_front = analogRead(IRSENSOR_FRONT);
+
+
   // experimentally found normal around 30 tape around 40
   // subject to change for later tests
   int tape_reading_threshold = 40;
@@ -201,6 +242,8 @@ void prototypeSensors() {
   printToDisplay(
     "Left sensor: " + String(reading_left)
     + "\nRight sensor: " + String(reading_right)
+    + "\nFront sensor: " + String(reading_front)
+    + "\nBack sensor: " + String(reading_back)
   );
 }
 
@@ -211,8 +254,8 @@ void prototypeSensors() {
  */ 
 void testTorqueVsPWM()
 {
-  int reading0 = analogRead(PTMT_0);
-  int reading1 = analogRead(PTMT_1);
+  int reading0 = analogRead(KP_ADJUSTOR);
+  int reading1 = analogRead(KI_ADJUSTOR);
 
   //int dutycycle0 = reading0 * 100 / 1023; // percentage 0-100
   //int dutycycle1 = reading1 * 100 / 1023;
@@ -234,17 +277,57 @@ void adjustMotor(int duty) {
 }
 */
 
+void prototypeReturnVehicleSensing() {
+  int reading_front = analogRead(IRSENSOR_FRONT);
+  int reading_back = analogRead(IRSENSOR_BACK);
+  int reading_front_comp = digitalRead(FRONT_COMPARATOR);
+  int reading_back_comp = digitalRead(BACK_COMPARATOR);
+  int tape_val_min = analogRead(TAPE_SIDE_MIN_ADJUSTOR);
+  int tape_val_max = analogRead(TAPE_SIDE_MAX_ADJUSTOR);
+
+  printToDisplay("Front sensor: " + String(reading_front) 
+    + "\nBack sensor: " + String(reading_back)
+    + "\nFront comparator: " + String(reading_front_comp)
+    + "\nBack comparator: " + String(reading_back_comp)
+    + "\nMin: " + String(tape_val_min) + " Max: " + String(tape_val_max)
+  );
+
+
+  if (reading_front_comp == LOW && reading_back_comp == LOW) {
+    adjustLeftMotor(0);
+    adjustRightMotor(0);
+  }
+
+  // wait 3 seconds
+  delay(3000);
+  // activate dropoff
+}
+
 // main
 void setup()
 {
   setupPtmtInputs();
   setupTapeSensors();
-  setupMotor();
+  setupReturnVehicleSensors();
+  setupMotors();
   // make sure setupDisplay is last because for some reason you gotta call it after all pinModes are done 
-  setupDisplay(); 
+  setupDisplay();
+
+  // interrupts
+  //attachInterrupt(digitalPinToInterrupt(FRONT_COMPARATOR), prototypeReturnVehicleSensing, LOW);
 }
 
 void loop()
 {
-  prototypeTapeFollowingPid();
+  printToDisplay(
+    " side min:" + String(analogRead(TAPE_SIDE_MIN_ADJUSTOR))
+    + " side max:" + String(analogRead(TAPE_SIDE_MAX_ADJUSTOR))
+    + "\n"
+    + " F:" + String(analogRead(IRSENSOR_FRONT)) + " B:" + String(analogRead(IRSENSOR_BACK))
+    + "\n"
+    + "Fcomp:" + String(analogRead(FRONT_COMPARATOR)) + " Bcomp:" + String(analogRead(BACK_COMPARATOR))
+  );
+
+  adjustLeftMotor(200);
+  adjustRightMotor(200);
 }
