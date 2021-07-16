@@ -1,5 +1,48 @@
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
+#include <Servo.h>
+
+// Flippy shenanigans
+#define FLAPPER PB_0
+
+#define FLAPPER_FREQ 200
+
+void pickupSetup()
+{
+  pinMode(FLAPPER, OUTPUT);
+
+  double percentage = 0.2;
+  pwm_start(FLAPPER, FLAPPER_FREQ, 4095 * percentage, RESOLUTION_12B_COMPARE_FORMAT);
+}
+
+// Dropoff shenanigans
+#define SERVO PB1
+Servo myServo;
+
+void servoSetup()
+{
+  myServo.attach(SERVO);
+}
+
+void servoLoop()
+{
+  myServo.write(70);
+  delay(7000);
+  for (int i = 70; i >= 0; i -= 5)
+  {
+    myServo.write(i);
+    delay(15);
+  }
+
+  delay(2000);
+
+  for (int i = 0; i <= 70; i += 5)
+  {
+    myServo.write(i);
+    delay(15);
+  }
+  delay(7000);
+}
 
 // IR sensor
 #define IRSENSOR_RIGHT PA_6
@@ -18,13 +61,13 @@
 // display
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define OLED_RESET -1 // This display does not have a reset pin accessible
+#define OLED_RESET -1    // This display does not have a reset pin accessible
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 void printToDisplay(String text)
 {
   display.clearDisplay();
-  display.setCursor(0,0);
+  display.setCursor(0, 0);
   display.println(text);
   display.display();
 }
@@ -41,7 +84,7 @@ void setupDisplay()
 
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);
+  display.setCursor(0, 0);
   display.display();
 }
 
@@ -61,12 +104,15 @@ void adjustMotor(int adjust)
   // analog values between 0 and 1023 => 0 to 3.3 V
 
   // printToDisplay(String(freqAdjustor));
-  if (adjust > 511) {
-    pwm_start(MOTOR_A, MOTORFREQ, (int)((adjust-512)*4095/511), RESOLUTION_12B_COMPARE_FORMAT);
+  if (adjust > 511)
+  {
+    pwm_start(MOTOR_A, MOTORFREQ, (int)((adjust - 512) * 4095 / 511), RESOLUTION_12B_COMPARE_FORMAT);
     pwm_start(MOTOR_B, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
-  } else {
+  }
+  else
+  {
     pwm_start(MOTOR_A, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(MOTOR_B, MOTORFREQ, (int)((511 - adjust)*4095/511), RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(MOTOR_B, MOTORFREQ, (int)((511 - adjust) * 4095 / 511), RESOLUTION_12B_COMPARE_FORMAT);
   }
 }
 
@@ -108,7 +154,8 @@ void pidTime()
 /**
  * Function for prototyping the tape reading sensors
  */
-void prototypeSensors() {
+void prototypeSensors()
+{
   int reading_left = analogRead(IRSENSOR_LEFT);
   int reading_right = analogRead(IRSENSOR_RIGHT);
 
@@ -117,15 +164,18 @@ void prototypeSensors() {
   int tape_reading_threshold = 40;
 
   printToDisplay(
-    "Left sensor: " + String(reading_left) 
-    + "\nRight sensor: " + String(reading_right)
-  );
+      "Left sensor: " + String(reading_left) + "\nRight sensor: " + String(reading_right));
 
-  if (reading_left >= tape_reading_threshold) {
+  if (reading_left >= tape_reading_threshold)
+  {
     // do something lol
-  } else if (reading_right >= tape_reading_threshold) {
+  }
+  else if (reading_right >= tape_reading_threshold)
+  {
     // do something lol
-  } else {
+  }
+  else
+  {
     adjustMotor(511);
   }
 }
@@ -133,13 +183,11 @@ void prototypeSensors() {
 // main
 void setup()
 {
-  setupIRSensors();
-  setupMotor();
-  // make sure setupDisplay is last because for some reason you gotta call it after all pinModes are done 
-  setupDisplay(); 
+  pickupSetup();
+  servoSetup();
 }
 
 void loop()
 {
-  prototypeSensors();
+  servoLoop();
 }
