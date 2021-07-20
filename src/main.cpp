@@ -1,5 +1,15 @@
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
+#include <Servo.h>
+
+// Flippy shenanigans
+#define FLAPPER PB_0
+
+#define FLAPPER_FREQ 200
+
+// Dropoff shenanigans
+#define SERVO PB1
+Servo myServo;
 
 // IR sensor
 #define TAPESENSOR_LEFT PA_0
@@ -16,7 +26,7 @@
 // motors
 #define MOTOR_L PA_8
 #define MOTOR_R PA_9
-#define MOTORFREQ_WHEELS 100
+#define MOTORFREQ 100
 // sweeper motor PA_10
 
 // dropoff B1
@@ -27,15 +37,28 @@
 // display
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define OLED_RESET -1 // This display does not have a reset pin accessible
+#define OLED_RESET -1    // This display does not have a reset pin accessible
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 void printToDisplay(String text)
 {
   display.clearDisplay();
-  display.setCursor(0,0);
+  display.setCursor(0, 0);
   display.println(text);
   display.display();
+}
+
+void servoSetup()
+{
+  myServo.attach(SERVO);
+}
+
+void pickupSetup()
+{
+  pinMode(FLAPPER, OUTPUT);
+
+  double percentage = 0.2;
+  pwm_start(FLAPPER, FLAPPER_FREQ, 4095 * percentage, RESOLUTION_12B_COMPARE_FORMAT);
 }
 
 void setupTapeSensors()
@@ -56,7 +79,7 @@ void setupDisplay()
 
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);
+  display.setCursor(0, 0);
   display.display();
 }
 
@@ -85,11 +108,11 @@ void adjustMotor(int adjust)
 
   // printToDisplay(String(freqAdjustor));
   if (adjust > 511) {
-    pwm_start(MOTOR_A, MOTORFREQ_WHEELS, (int)((adjust-512)*4095/511), RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(MOTOR_B, MOTORFREQ_WHEELS, 0, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(MOTOR_A, MOTORFREQ, (int)((adjust-512)*4095/511), RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(MOTOR_B, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
   } else {
-    pwm_start(MOTOR_A, MOTORFREQ_WHEELS, 0, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(MOTOR_B, MOTORFREQ_WHEELS, (int)((511 - adjust)*4095/511), RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(MOTOR_A, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(MOTOR_B, MOTORFREQ, (int)((511 - adjust)*4095/511), RESOLUTION_12B_COMPARE_FORMAT);
   }
 }
 */
@@ -102,7 +125,7 @@ void adjustLeftMotor(int value)
   int actual_value = value + offset;
   if (actual_value > 1023) actual_value = 1023;
   if (actual_value < 0 || value == 0) actual_value = 0;
-  pwm_start(MOTOR_L, MOTORFREQ_WHEELS, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
+  pwm_start(MOTOR_L, MOTORFREQ, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
 }
 
 void adjustRightMotor(int value)
@@ -113,7 +136,7 @@ void adjustRightMotor(int value)
   int actual_value = value + offset;
   if (actual_value > 1023) actual_value = 1023;
   if (actual_value < 0 || value == 0) actual_value = 0;
-  pwm_start(MOTOR_R, MOTORFREQ_WHEELS, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
+  pwm_start(MOTOR_R, MOTORFREQ, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
 }
 
 /**
@@ -204,10 +227,6 @@ void prototypeSensors() {
 
   int reading_rv = analogRead(TAPESENSOR_RV);
 
-  // experimentally found normal around 30 tape around 40
-  // subject to change for later tests
-  int tape_reading_threshold = 40;
-
   printToDisplay(
     "Left sensor: " + String(reading_left)
     + "\nRight sensor: " + String(reading_right)
@@ -241,9 +260,29 @@ void adjustMotor(int duty) {
   int offset = 0; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
   int actual_duty = duty + offset;
   if (actual_duty > 100) actual_duty = 100;
-  pwm_start(MOTOR_PIN, MOTORFREQ_WHEELS, actual_duty * 4095 / 100, RESOLUTION_12B_COMPARE_FORMAT);
+  pwm_start(MOTOR_PIN, MOTORFREQ, actual_duty * 4095 / 100, RESOLUTION_12B_COMPARE_FORMAT);
 }
 */
+
+void servoLoop()
+{
+  myServo.write(70);
+  delay(7000);
+  for (int i = 70; i >= 0; i -= 5)
+  {
+    myServo.write(i);
+    delay(15);
+  }
+
+  delay(2000);
+
+  for (int i = 0; i <= 70; i += 5)
+  {
+    myServo.write(i);
+    delay(15);
+  }
+  delay(7000);
+}
 
 void prototypeReturnVehicleSensing() {
   int reading_rv = analogRead(TAPESENSOR_RV);
@@ -259,7 +298,7 @@ void prototypeReturnVehicleSensing() {
   if (reading_comp == HIGH) {
     adjustLeftMotor(0);
     adjustRightMotor(0);
-    delay(3000);
+    servoLoop();
   }
 
   // wait 3 seconds
@@ -273,11 +312,13 @@ void setup()
   setupTapeSensors();
   setupReturnVehicleSensors();
   setupMotors();
+  pickupSetup();
+  servoSetup();
   // make sure setupDisplay is last because for some reason you gotta call it after all pinModes are done 
   setupDisplay();
 
   // interrupts
-  //attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, LOW);
+  attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, LOW);
 }
 
 void loop()
