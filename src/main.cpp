@@ -4,7 +4,6 @@
 
 // Flippy shenanigans
 #define FLAPPER PB_0
-
 #define FLAPPER_FREQ 200
 
 // Dropoff shenanigans
@@ -14,7 +13,6 @@ Servo myServo;
 // IR sensor
 #define TAPESENSOR_LEFT PA_0
 #define TAPESENSOR_RIGHT PA_1
-
 #define TAPESENSOR_RV PA_2
 
 // Potentiometer inputs
@@ -39,6 +37,13 @@ Servo myServo;
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET -1    // This display does not have a reset pin accessible
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// state machine
+#define SKYCRANE 0
+#define DRIVING 1
+#define DROPOFF 2
+
+int STATE = DRIVING;
 
 void printToDisplay(String text)
 {
@@ -264,7 +269,7 @@ void adjustMotor(int duty) {
 }
 */
 
-void servoLoop()
+void dropoffFunction()
 {
   myServo.write(70);
   delay(7000);
@@ -281,28 +286,12 @@ void servoLoop()
     myServo.write(i);
     delay(15);
   }
-  delay(7000);
+
+  STATE = DRIVING;
 }
 
 void prototypeReturnVehicleSensing() {
-  int reading_rv = analogRead(TAPESENSOR_RV);
-  int reading_comp = digitalRead(RV_COMPARATOR);
-  int tape_val_min = analogRead(TAPE_MIN_ADJUSTOR);
-
-  printToDisplay("RV sensor: " + String(reading_rv)
-    + "\nComparator: " + String(reading_comp)
-    + "\nMin: " + String(tape_val_min)
-  );
-
-
-  if (reading_comp == HIGH) {
-    adjustLeftMotor(0);
-    adjustRightMotor(0);
-    servoLoop();
-  }
-
-  // wait 3 seconds
-    // activate dropoff
+  STATE = DROPOFF;
 }
 
 // main
@@ -318,23 +307,35 @@ void setup()
   setupDisplay();
 
   // interrupts
-  attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, LOW);
+  attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, HIGH);
 }
 
 void loop()
 {
-  printToDisplay(
-    "tape min:" + String(analogRead(TAPE_MIN_ADJUSTOR))
-    + "\n"
-    + " L:" + String(analogRead(TAPESENSOR_LEFT)) + " B:" + String(analogRead(TAPESENSOR_RIGHT))
-    + "\n"
-    + "RV: " + String(analogRead(TAPESENSOR_RV))
-    + "\n"
-    + "RV comparator:" + String(digitalRead(RV_COMPARATOR))
-    + "\n"
-    + "kp:" + analogRead(KP_ADJUSTOR) + " ki:" + analogRead(KI_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
-  );
+  printToDisplay(String(STATE));
+  switch(STATE) {
+    case SKYCRANE:
+      break;
+    case DRIVING:
+      printToDisplay(
+      "tape min:" + String(analogRead(TAPE_MIN_ADJUSTOR))
+      + "\n"
+      + " L:" + String(analogRead(TAPESENSOR_LEFT)) + " B:" + String(analogRead(TAPESENSOR_RIGHT))
+      + "\n"
+      + "RV: " + String(analogRead(TAPESENSOR_RV))
+      + "\n"
+      + "RV comparator:" + String(digitalRead(RV_COMPARATOR))
+      + "\n"
+      + "kp:" + analogRead(KP_ADJUSTOR) + " ki:" + analogRead(KI_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
+      );
 
-  adjustLeftMotor(analogRead(KP_ADJUSTOR));
-  adjustRightMotor(analogRead(KI_ADJUSTOR));
+      adjustLeftMotor(analogRead(KP_ADJUSTOR));
+      adjustRightMotor(analogRead(KI_ADJUSTOR));
+      break;
+    case DROPOFF:
+      adjustLeftMotor(0);
+      adjustRightMotor(0);
+      dropoffFunction();
+      break;
+  }
 }
