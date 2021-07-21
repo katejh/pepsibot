@@ -9,11 +9,12 @@ TapeFollower::TapeFollower()
     last_error_timesteps = 0;
     current_error_timesteps = 0;
     neutral_motor_speed = 200;
+    error = 0;
 }
 
 int TapeFollower::getPidError()
 {
-    int error = calculateError();
+    error = calculateError();
     if (error != last_error) {
         last_error_timesteps = current_error_timesteps;
         current_error_timesteps = 0;
@@ -66,7 +67,7 @@ int TapeFollower::calculateError()
 
 bool TapeFollower::isTapeReadingValue(int value)
 {
-    int tape_value_min = analogRead(TAPE_MIN_ADJUSTOR); // check this value before running the code
+    int tape_value_min = analogRead(TAPE_MIN_ADJUSTOR);
 
     if (value >= tape_value_min){
         return true;

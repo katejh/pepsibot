@@ -1,33 +1,11 @@
 #include <Adafruit_SSD1306.h>
 #include <Servo.h>
 #include "TapeFollower.h"
+#include "Pin.h"
 
-// IR sensors
-#define TAPESENSOR_LEFT PA_0
-#define TAPESENSOR_RIGHT PA_1
-#define TAPESENSOR_RV PA_2
-
-// Potentiometer inputs
-#define KP_ADJUSTOR PA_3
-#define KI_ADJUSTOR PA_4
-#define KD_ADJUSTOR PA_5
-#define TAPE_MIN_ADJUSTOR PA_6
-
-// motors
-#define MOTOR_L PA_8
-#define MOTOR_R PA_9
 #define MOTORFREQ 100
 
-// Flippy shenanigans
-#define FLAPPER PA_10
 #define FLAPPER_FREQ 200
-
-// Dropoff shenanigans
-#define SERVO PB1
-Servo myServo;
-
-// comparators (for checking if rv sensors are within a certain range)
-#define RV_COMPARATOR PB10
 
 // display
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -42,6 +20,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 int STATE = DRIVING;
 
+Servo myServo;
 TapeFollower tapeFollower = TapeFollower();
 
 void printToDisplay(String text)
@@ -124,8 +103,7 @@ void adjustMotor(int adjust)
 void adjustLeftMotor(int value)
 {
   // value 0-1023
-  // note if right motor off offset is 430
-  int offset = 210; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
+  int offset = 166; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
   int actual_value = value + offset;
   if (actual_value > 1023) actual_value = 1023;
   if (actual_value < 0 || value == 0) actual_value = 0;
@@ -135,8 +113,7 @@ void adjustLeftMotor(int value)
 void adjustRightMotor(int value)
 {
   // value 0-1023
-  // note if left motor off offset is 430
-  int offset = 210; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
+  int offset = 166; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
   int actual_value = value + offset;
   if (actual_value > 1023) actual_value = 1023;
   if (actual_value < 0 || value == 0) actual_value = 0;
@@ -205,8 +182,8 @@ void prototypeTapeFollowingPid()
 
   int pid_error = p + i + d;
 
-  adjustLeftMotor(neutral_motor_value + pid_error);
-  adjustRightMotor(neutral_motor_value - pid_error);
+  adjustLeftMotor(neutral_motor_value - pid_error);
+  adjustRightMotor(neutral_motor_value + pid_error);
 
   total_i += i;
   last_error = error;
@@ -295,7 +272,7 @@ void prototypeReturnVehicleSensing() {
 
 void tapeFollowingPid()
 {
-  int neutral_motor_value = 200; // regular speed for motor while driving straight
+  int neutral_motor_value = 60; // regular speed for motor while driving straight
 
   int pid_error = tapeFollower.getPidError();
 
@@ -322,21 +299,23 @@ void setup()
 void loop()
 {
   printToDisplay(
-    "RV comparator:" + String(digitalRead(RV_COMPARATOR))
+    "RV comparator: " + String(digitalRead(RV_COMPARATOR))
     + "\n"
-    + "tape min:" + String(analogRead(TAPE_MIN_ADJUSTOR))
+    + "tape min: " + String(analogRead(TAPE_MIN_ADJUSTOR))
     + "\n"
-    + " L:" + String(analogRead(TAPESENSOR_LEFT)) + " R:" + String(analogRead(TAPESENSOR_RIGHT))
-    + "RV: " + String(analogRead(TAPESENSOR_RV))
+    + "L:" + String(analogRead(TAPESENSOR_LEFT)) + " R:" + String(analogRead(TAPESENSOR_RIGHT))
+    + " RV:" + String(analogRead(TAPESENSOR_RV))
     + "\n"
     + "kp:" + analogRead(KP_ADJUSTOR) + " ki:" + analogRead(KI_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
+    + "\n"
+    + "error:" + String(tapeFollower.error)
   );
   
   switch(STATE) {
     case SKYCRANE:
       break;
     case DRIVING:
-      prototypeTapeFollowingPid();
+      tapeFollowingPid();
       break;
     case DROPOFF:
       adjustLeftMotor(0);

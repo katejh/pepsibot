@@ -3,7 +3,8 @@ class TapeFollower
     public:
         TapeFollower();
         int getPidError();
-        bool isTapeReadingValue(int value);
+        static bool isTapeReadingValue(int value);
+        int error;
 
     private:
         int last_error;
