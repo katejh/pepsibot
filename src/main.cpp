@@ -1,16 +1,8 @@
-#include <Wire.h>
 #include <Adafruit_SSD1306.h>
 #include <Servo.h>
+//#include "TapeFollower.h"
 
-// Flippy shenanigans
-#define FLAPPER PB_0
-#define FLAPPER_FREQ 200
-
-// Dropoff shenanigans
-#define SERVO PB1
-Servo myServo;
-
-// IR sensor
+// IR sensors
 #define TAPESENSOR_LEFT PA_0
 #define TAPESENSOR_RIGHT PA_1
 #define TAPESENSOR_RV PA_2
@@ -25,9 +17,14 @@ Servo myServo;
 #define MOTOR_L PA_8
 #define MOTOR_R PA_9
 #define MOTORFREQ 100
-// sweeper motor PA_10
 
-// dropoff B1
+// Flippy shenanigans
+#define FLAPPER PA_10
+#define FLAPPER_FREQ 200
+
+// Dropoff shenanigans
+#define SERVO PB1
+Servo myServo;
 
 // comparators (for checking if rv sensors are within a certain range)
 #define RV_COMPARATOR PB10
@@ -44,6 +41,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define DROPOFF 2
 
 int STATE = DRIVING;
+
+TapeFollower tapeFollower = TapeFollower();
 
 void printToDisplay(String text)
 {
@@ -294,6 +293,16 @@ void prototypeReturnVehicleSensing() {
   STATE = DROPOFF;
 }
 
+void tapeFollowingPid()
+{
+  int neutral_motor_value = 200; // regular speed for motor while driving straight
+
+  int pid_error = tapeFollower.getPidError();
+
+  adjustLeftMotor(neutral_motor_value + pid_error);
+  adjustRightMotor(neutral_motor_value - pid_error);
+}
+
 // main
 void setup()
 {
@@ -312,25 +321,22 @@ void setup()
 
 void loop()
 {
-  printToDisplay(String(STATE));
+  printToDisplay(
+    "tape min:" + String(analogRead(TAPE_MIN_ADJUSTOR))
+    + "\n"
+    + " L:" + String(analogRead(TAPESENSOR_LEFT)) + " R:" + String(analogRead(TAPESENSOR_RIGHT))
+    + "RV: " + String(analogRead(TAPESENSOR_RV))
+    + "\n"
+    + "RV comparator:" + String(digitalRead(RV_COMPARATOR))
+    + "\n"
+    + "kp:" + analogRead(KP_ADJUSTOR) + " ki:" + analogRead(KI_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
+  );
+  
   switch(STATE) {
     case SKYCRANE:
       break;
     case DRIVING:
-      printToDisplay(
-      "tape min:" + String(analogRead(TAPE_MIN_ADJUSTOR))
-      + "\n"
-      + " L:" + String(analogRead(TAPESENSOR_LEFT)) + " B:" + String(analogRead(TAPESENSOR_RIGHT))
-      + "\n"
-      + "RV: " + String(analogRead(TAPESENSOR_RV))
-      + "\n"
-      + "RV comparator:" + String(digitalRead(RV_COMPARATOR))
-      + "\n"
-      + "kp:" + analogRead(KP_ADJUSTOR) + " ki:" + analogRead(KI_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
-      );
-
-      adjustLeftMotor(analogRead(KP_ADJUSTOR));
-      adjustRightMotor(analogRead(KI_ADJUSTOR));
+      prototypeTapeFollowingPid();
       break;
     case DROPOFF:
       adjustLeftMotor(0);
