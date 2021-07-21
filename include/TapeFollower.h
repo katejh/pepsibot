@@ -1,3 +1,6 @@
+#ifndef TAPEFOLLOWER_H
+#define TAPEFOLLOWER_H
+
 class TapeFollower
 {
     public:
@@ -14,3 +17,5 @@ class TapeFollower
         int neutral_motor_speed;
         int calculateError();
 };
+
+#endif

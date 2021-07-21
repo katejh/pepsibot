@@ -1,6 +1,6 @@
 #include <Adafruit_SSD1306.h>
 #include <Servo.h>
-#include "TapeFollower.h"
+#include "Robot.h"
 #include "Pin.h"
 
 #define MOTORFREQ 100
@@ -21,7 +21,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 int STATE = DRIVING;
 
 Servo myServo;
-TapeFollower tapeFollower = TapeFollower();
+Robot robot = Robot();
 
 void printToDisplay(String text)
 {
@@ -135,6 +135,7 @@ bool isTapeReadingValue(int reading)
   }
 }
 
+/*
 int last_error = 0;
 int total_i = 0;
 int last_error_timesteps = 0;
@@ -151,7 +152,6 @@ void prototypeTapeFollowingPid()
   0 1 error = -1
   1 0 error = 1
   0 0 error = -5 if last error -1, 5 if last 1 (5 comes from ratio of one sensor off tape vs both sensors off tape. CHECK ROBOT FOR ACTUAL PROPORTIONS THIS IS JUST AN EXAMPLE)
-  */
 
   int error = 0;
   if (isTapeReadingValue(reading_left) && isTapeReadingValue(reading_right)){
@@ -188,7 +188,6 @@ void prototypeTapeFollowingPid()
   total_i += i;
   last_error = error;
 
-  /*
   printToDisplay(
     "min:" + String(analogRead(TAPE_MIN_ADJUSTOR)) + "\n"
     + "L:" + String(reading_left) + " R:" + String(reading_right) + "\n"
@@ -196,8 +195,8 @@ void prototypeTapeFollowingPid()
     + "p:" + String(p) + " i:" + String(i) + " d:" + String(d) + "\n"
     + "Error:" + String(error)
   );
-  */
 }
+*/
 
 /**
  * Function for prototyping the tape reading sensors
@@ -274,7 +273,7 @@ void tapeFollowingPid()
 {
   int neutral_motor_value = 60; // regular speed for motor while driving straight
 
-  int pid_error = tapeFollower.getPidError();
+  int pid_error = robot.tapeFollower.getPidError();
 
   adjustLeftMotor(neutral_motor_value + pid_error);
   adjustRightMotor(neutral_motor_value - pid_error);
@@ -283,17 +282,12 @@ void tapeFollowingPid()
 // main
 void setup()
 {
-  setupPtmtInputs();
-  setupTapeSensors();
-  setupReturnVehicleSensors();
-  setupMotors();
-  pickupSetup();
-  servoSetup();
+  robot.setup();
   // make sure setupDisplay is last because for some reason you gotta call it after all pinModes are done 
   setupDisplay();
 
   // interrupts
-  attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, HIGH);
+  //attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, HIGH);
 }
 
 void loop()
@@ -308,19 +302,19 @@ void loop()
     + "\n"
     + "kp:" + analogRead(KP_ADJUSTOR) + " ki:" + analogRead(KI_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
     + "\n"
-    + "error:" + String(tapeFollower.error)
+    + "error:" + String(robot.tapeFollower.error)
   );
   
   switch(STATE) {
     case SKYCRANE:
       break;
     case DRIVING:
-      tapeFollowingPid();
+      robot.followTape();
       break;
     case DROPOFF:
       adjustLeftMotor(0);
       adjustRightMotor(0);
-      dropoffFunction();
+      robot.dropOff();
       break;
   }
 }

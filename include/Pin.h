@@ -1,6 +1,8 @@
 #ifndef PIN_H
 #define PIN_H
 
+#include <Adafruit_SSD1306.h>
+
 // IR sensors
 #define TAPESENSOR_LEFT PA_0
 #define TAPESENSOR_RIGHT PA_1
