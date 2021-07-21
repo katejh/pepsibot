@@ -1,6 +1,6 @@
 #include <Adafruit_SSD1306.h>
 #include <Servo.h>
-//#include "TapeFollower.h"
+#include "TapeFollower.h"
 
 // IR sensors
 #define TAPESENSOR_LEFT PA_0
@@ -322,12 +322,12 @@ void setup()
 void loop()
 {
   printToDisplay(
-    "tape min:" + String(analogRead(TAPE_MIN_ADJUSTOR))
+    "RV comparator:" + String(digitalRead(RV_COMPARATOR))
+    + "\n"
+    + "tape min:" + String(analogRead(TAPE_MIN_ADJUSTOR))
     + "\n"
     + " L:" + String(analogRead(TAPESENSOR_LEFT)) + " R:" + String(analogRead(TAPESENSOR_RIGHT))
     + "RV: " + String(analogRead(TAPESENSOR_RV))
-    + "\n"
-    + "RV comparator:" + String(digitalRead(RV_COMPARATOR))
     + "\n"
     + "kp:" + analogRead(KP_ADJUSTOR) + " ki:" + analogRead(KI_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
   );
