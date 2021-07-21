@@ -76,6 +76,9 @@ void Robot::driveRight(int speed)
 
 void Robot::dropOff()
 {
+    driveLeft(0);
+    driveRight(0);
+    
     myServo.write(70);
     delay(7000);
     for (int i = 70; i >= 0; i -= 5)

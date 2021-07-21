@@ -312,8 +312,6 @@ void loop()
       robot.followTape();
       break;
     case DROPOFF:
-      adjustLeftMotor(0);
-      adjustRightMotor(0);
       robot.dropOff();
       break;
   }
