@@ -26,7 +26,7 @@ void Robot::pickupSetup()
 {
   pinMode(FLAPPER, OUTPUT);
 
-  double percentage = 0.2;
+  double percentage = 0.60;
   pwm_start(FLAPPER, flapper_freq, 4095 * percentage, RESOLUTION_12B_COMPARE_FORMAT);
 }
 
@@ -78,9 +78,9 @@ void Robot::dropOff()
 {
     driveLeft(0);
     driveRight(0);
-    
+
     myServo.write(70);
-    delay(7000);
+    delay(2000);
     for (int i = 70; i >= 0; i -= 5)
     {
         myServo.write(i);

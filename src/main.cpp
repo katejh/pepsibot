@@ -14,11 +14,13 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // state machine
-#define SKYCRANE 0
-#define DRIVING 1
-#define DROPOFF 2
+enum STATE {
+  SKYCRANE,
+  DRIVING,
+  DROPOFF
+};
 
-int STATE = DRIVING;
+STATE state = STATE::DRIVING;
 
 Servo myServo;
 Robot robot = Robot();
@@ -103,7 +105,7 @@ void adjustMotor(int adjust)
 void adjustLeftMotor(int value)
 {
   // value 0-1023
-  int offset = 166; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
+  int offset = 0; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
   int actual_value = value + offset;
   if (actual_value > 1023) actual_value = 1023;
   if (actual_value < 0 || value == 0) actual_value = 0;
@@ -113,7 +115,7 @@ void adjustLeftMotor(int value)
 void adjustRightMotor(int value)
 {
   // value 0-1023
-  int offset = 166; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
+  int offset = 0; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
   int actual_value = value + offset;
   if (actual_value > 1023) actual_value = 1023;
   if (actual_value < 0 || value == 0) actual_value = 0;
@@ -232,7 +234,7 @@ void testTorqueVsPWM()
   );
   // adjust left and right motors appropriately
   adjustLeftMotor(reading0);
-  adjustRightMotor(reading1);
+  adjustRightMotor(reading0);
 }
 
 /*
@@ -262,11 +264,13 @@ void dropoffFunction()
     delay(15);
   }
 
-  STATE = DRIVING;
+  state = STATE::DRIVING;
 }
 
 void prototypeReturnVehicleSensing() {
-  STATE = DROPOFF;
+  if (TapeFollower::isTapeReadingValue(analogRead(TAPESENSOR_LEFT)) && TapeFollower::isTapeReadingValue(TAPESENSOR_RIGHT)) {
+    state = STATE::DROPOFF;
+  }
 }
 
 void tapeFollowingPid()
@@ -275,8 +279,8 @@ void tapeFollowingPid()
 
   int pid_error = robot.tapeFollower.getPidError();
 
-  adjustLeftMotor(neutral_motor_value + pid_error);
-  adjustRightMotor(neutral_motor_value - pid_error);
+  adjustLeftMotor(neutral_motor_value - pid_error);
+  adjustRightMotor(neutral_motor_value + pid_error);
 }
 
 // main
@@ -287,7 +291,7 @@ void setup()
   setupDisplay();
 
   // interrupts
-  //attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, HIGH);
+  attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, HIGH);
 }
 
 void loop()
@@ -305,14 +309,15 @@ void loop()
     + "error:" + String(robot.tapeFollower.error)
   );
   
-  switch(STATE) {
-    case SKYCRANE:
+  switch(state) {
+    case STATE::SKYCRANE:
       break;
-    case DRIVING:
+    case STATE::DRIVING:
       robot.followTape();
       break;
-    case DROPOFF:
+    case STATE::DROPOFF:
       robot.dropOff();
+      state = STATE::DRIVING;
       break;
   }
 }
