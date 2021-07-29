@@ -22,7 +22,6 @@ enum STATE {
 
 STATE state = STATE::DRIVING;
 
-Servo myServo;
 Robot robot = Robot();
 
 void printToDisplay(String text)
@@ -33,31 +32,6 @@ void printToDisplay(String text)
   display.display();
 }
 
-void servoSetup()
-{
-  myServo.attach(SERVO);
-}
-
-void pickupSetup()
-{
-  pinMode(FLAPPER, OUTPUT);
-
-  double percentage = 0.2;
-  pwm_start(FLAPPER, FLAPPER_FREQ, 4095 * percentage, RESOLUTION_12B_COMPARE_FORMAT);
-}
-
-void setupTapeSensors()
-{
-  pinMode(TAPESENSOR_LEFT, INPUT_ANALOG);
-  pinMode(TAPESENSOR_RIGHT, INPUT_ANALOG);
-}
-
-void setupReturnVehicleSensors()
-{
-  pinMode(TAPESENSOR_RV, INPUT_ANALOG);
-  pinMode(RV_COMPARATOR, INPUT_PULLUP);
-}
-
 void setupDisplay()
 {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -66,60 +40,6 @@ void setupDisplay()
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
   display.display();
-}
-
-void setupMotors()
-{
-  pinMode(MOTOR_L, OUTPUT);
-  pinMode(MOTOR_R, OUTPUT);
-}
-
-
-void setupPtmtInputs()
-{
-  pinMode(KP_ADJUSTOR, INPUT_ANALOG);
-  pinMode(KI_ADJUSTOR, INPUT_ANALOG);
-  pinMode(KD_ADJUSTOR, INPUT_ANALOG);
-  pinMode(TAPE_MIN_ADJUSTOR, INPUT_ANALOG);
-}
-
-/**
- * Take a value from 0 - 1023
- * 511 = stop
-void adjustMotor(int adjust)
-{
-  // one duty cycle is divided into 4095 tics
-  // analog values between 0 and 1023 => 0 to 3.3 V
-
-  // printToDisplay(String(freqAdjustor));
-  if (adjust > 511) {
-    pwm_start(MOTOR_A, MOTORFREQ, (int)((adjust-512)*4095/511), RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(MOTOR_B, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
-  } else {
-    pwm_start(MOTOR_A, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(MOTOR_B, MOTORFREQ, (int)((511 - adjust)*4095/511), RESOLUTION_12B_COMPARE_FORMAT);
-  }
-}
-*/
-
-void adjustLeftMotor(int value)
-{
-  // value 0-1023
-  int offset = 0; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
-  int actual_value = value + offset;
-  if (actual_value > 1023) actual_value = 1023;
-  if (actual_value < 0 || value == 0) actual_value = 0;
-  pwm_start(MOTOR_L, MOTORFREQ, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
-}
-
-void adjustRightMotor(int value)
-{
-  // value 0-1023
-  int offset = 0; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
-  int actual_value = value + offset;
-  if (actual_value > 1023) actual_value = 1023;
-  if (actual_value < 0 || value == 0) actual_value = 0;
-  pwm_start(MOTOR_R, MOTORFREQ, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
 }
 
 /**
@@ -136,69 +56,6 @@ bool isTapeReadingValue(int reading)
     return false;
   }
 }
-
-/*
-int last_error = 0;
-int total_i = 0;
-int last_error_timesteps = 0;
-int current_error_timesteps = 0;
-void prototypeTapeFollowingPid()
-{
-  int neutral_motor_value = 200; // regular speed for motor while driving straight
-
-  int reading_left = analogRead(TAPESENSOR_LEFT);
-  int reading_right = analogRead(TAPESENSOR_RIGHT);
-
-  /*
-  1 1 error = 0
-  0 1 error = -1
-  1 0 error = 1
-  0 0 error = -5 if last error -1, 5 if last 1 (5 comes from ratio of one sensor off tape vs both sensors off tape. CHECK ROBOT FOR ACTUAL PROPORTIONS THIS IS JUST AN EXAMPLE)
-
-  int error = 0;
-  if (isTapeReadingValue(reading_left) && isTapeReadingValue(reading_right)){
-    error = 0;
-  } else if (!isTapeReadingValue(reading_left) && isTapeReadingValue(reading_right)) {
-    error = -1;
-  } else if (isTapeReadingValue(reading_left) && !isTapeReadingValue(reading_right)) {
-    error = 1;
-  } else if (last_error == -1 || last_error == -5) {
-    error = -5;
-  } else if (last_error == 1 || last_error == 5) {
-    error = 5;
-  }
-
-  if (error != last_error) {
-    last_error_timesteps = current_error_timesteps;
-    current_error_timesteps = 0;
-  }
-  current_error_timesteps++;
-
-  int k_p = analogRead(KP_ADJUSTOR);
-  int k_i = analogRead(KI_ADJUSTOR) * 100 / 1023; // cap it at 100
-  int k_d = analogRead(KD_ADJUSTOR) * 100 / 1023;
-
-  int p = k_p * error;
-  int i = k_i * (total_i + error);
-  int d = k_d * ((float)(error - last_error) / (last_error_timesteps + current_error_timesteps));
-
-  int pid_error = p + i + d;
-
-  adjustLeftMotor(neutral_motor_value - pid_error);
-  adjustRightMotor(neutral_motor_value + pid_error);
-
-  total_i += i;
-  last_error = error;
-
-  printToDisplay(
-    "min:" + String(analogRead(TAPE_MIN_ADJUSTOR)) + "\n"
-    + "L:" + String(reading_left) + " R:" + String(reading_right) + "\n"
-    + "k_p:" + String(k_p) + " k_i:" + String(k_i) + " k_d:" + String(k_d) + "\n"
-    + "p:" + String(p) + " i:" + String(i) + " d:" + String(d) + "\n"
-    + "Error:" + String(error)
-  );
-}
-*/
 
 /**
  * Function for prototyping the tape reading sensors
@@ -223,64 +80,15 @@ void prototypeSensors() {
  */ 
 void testTorqueVsPWM()
 {
-  int reading0 = analogRead(KP_ADJUSTOR);
-  int reading1 = analogRead(KI_ADJUSTOR);
+  int reading = analogRead(KP_ADJUSTOR);
 
-  //int dutycycle0 = reading0 * 100 / 1023; // percentage 0-100
-  //int dutycycle1 = reading1 * 100 / 1023;
-
-  printToDisplay("Reading 0: " + String(reading0)
-    + "\nReading 1: " + String(reading1)
-  );
-  // adjust left and right motors appropriately
-  adjustLeftMotor(reading0);
-  adjustRightMotor(reading0);
-}
-
-/*
-void adjustMotor(int duty) {
-  int offset = 0; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
-  int actual_duty = duty + offset;
-  if (actual_duty > 100) actual_duty = 100;
-  pwm_start(MOTOR_PIN, MOTORFREQ, actual_duty * 4095 / 100, RESOLUTION_12B_COMPARE_FORMAT);
-}
-*/
-
-void dropoffFunction()
-{
-  myServo.write(70);
-  delay(7000);
-  for (int i = 70; i >= 0; i -= 5)
-  {
-    myServo.write(i);
-    delay(15);
-  }
-
-  delay(2000);
-
-  for (int i = 0; i <= 70; i += 5)
-  {
-    myServo.write(i);
-    delay(15);
-  }
-
-  state = STATE::DRIVING;
+  printToDisplay("Speed: " + String(reading));
+  
+  robot.drive(reading);
 }
 
 void prototypeReturnVehicleSensing() {
-  if (TapeFollower::isTapeReadingValue(analogRead(TAPESENSOR_LEFT)) && TapeFollower::isTapeReadingValue(TAPESENSOR_RIGHT)) {
-    state = STATE::DROPOFF;
-  }
-}
-
-void tapeFollowingPid()
-{
-  int neutral_motor_value = 60; // regular speed for motor while driving straight
-
-  int pid_error = robot.tapeFollower.getPidError();
-
-  adjustLeftMotor(neutral_motor_value - pid_error);
-  adjustRightMotor(neutral_motor_value + pid_error);
+  state = STATE::DROPOFF;
 }
 
 // main
@@ -291,7 +99,7 @@ void setup()
   setupDisplay();
 
   // interrupts
-  attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, HIGH);
+  attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, RISING);
 }
 
 void loop()
@@ -316,7 +124,11 @@ void loop()
       robot.followTape();
       break;
     case STATE::DROPOFF:
-      robot.dropOff();
+      if (robot.tapeFollower.error == 0) {
+        printToDisplay("dropping off");
+        robot.stop();
+        robot.dropOff();
+      }
       state = STATE::DRIVING;
       break;
   }
