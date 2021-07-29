@@ -7,6 +7,9 @@ Robot::Robot()
     tapeFollower = TapeFollower();
 }
 
+/**
+ * Set up all robot stuff
+ */ 
 void Robot::setup()
 {
     setupPtmtInputs();
@@ -20,13 +23,14 @@ void Robot::setup()
 void Robot::servoSetup()
 {
   myServo.attach(SERVO);
+  myServo.write(180);
 }
 
 void Robot::pickupSetup()
 {
   pinMode(FLAPPER, OUTPUT);
 
-  double percentage = 0.60;
+  double percentage = 0.48;
   pwm_start(FLAPPER, flapper_freq, 4095 * percentage, RESOLUTION_12B_COMPARE_FORMAT);
 }
 
@@ -56,6 +60,20 @@ void Robot::setupPtmtInputs()
   pinMode(TAPE_MIN_ADJUSTOR, INPUT_ANALOG);
 }
 
+/**
+ * Drive straight forward
+ * @param speed value from 0-1023
+ */ 
+void Robot::drive(int speed)
+{
+  driveLeft(speed);
+  driveRight(speed);
+}
+
+/**
+ * Control speed of left wheel
+ * @param speed value from 0-1023
+ */ 
 void Robot::driveLeft(int speed)
 {
     // value 0-1023
@@ -65,6 +83,10 @@ void Robot::driveLeft(int speed)
     pwm_start(MOTOR_L, motor_freq, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
 }
 
+/**
+ * Control speed of right wheel
+ * @param speed value from 0-1023
+ */ 
 void Robot::driveRight(int speed)
 {
     // value 0-1023
@@ -74,32 +96,59 @@ void Robot::driveRight(int speed)
     pwm_start(MOTOR_R, motor_freq, actual_value * 4095 / 1023, RESOLUTION_12B_COMPARE_FORMAT);
 }
 
-void Robot::dropOff()
+/**
+ * Stop the robot
+ */ 
+void Robot::stop()
 {
-    driveLeft(0);
-    driveRight(0);
-
-    myServo.write(70);
-    delay(2000);
-    for (int i = 70; i >= 0; i -= 5)
-    {
-        myServo.write(i);
-        delay(15);
-    }
-
-    delay(2000);
-
-    for (int i = 0; i <= 70; i += 5)
-    {
-        myServo.write(i);
-        delay(15);
-    }
+  drive(0);
 }
 
+/**
+ * Activate dropoff function
+ */ 
+void Robot::dropOff()
+{
+  myServo.write(180);
+  delay(2000);
+  for (int i = 180; i >= 140; i -= 1)
+  {
+      myServo.write(i);
+      delay(15);
+  }
+
+  for (int i = 140; i >= 70; i -= 5) {
+    myServo.write(i);
+    delay(5);
+  }
+
+  delay(2000);
+
+  for (int i = 70; i <= 180; i += 5)
+  {
+      myServo.write(i);
+      delay(25);
+  }
+}
+
+/**
+ * Let robot drive autonomously by following a tape path.
+ * Assumes a white floor with black electrical tape path.
+ */ 
 void Robot::followTape()
 {
     int pid_error = tapeFollower.getPidError();
 
     driveLeft(neutral_speed - pid_error);
     driveRight(neutral_speed + pid_error);
+}
+
+/**
+ * Control sweeper motor speed
+ * @param speed value from 0-1023
+ */ 
+void Robot::sweep(int speed)
+{
+  double percentage = (double)speed / 1023;
+  pwm_start(FLAPPER, flapper_freq, 4095 * percentage, RESOLUTION_12B_COMPARE_FORMAT);
 }
