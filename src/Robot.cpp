@@ -30,7 +30,7 @@ void Robot::pickupSetup()
 {
   pinMode(FLAPPER, OUTPUT);
 
-  double percentage = 0.48;
+  double percentage = 0.40;
   pwm_start(FLAPPER, flapper_freq, 4095 * percentage, RESOLUTION_12B_COMPARE_FORMAT);
 }
 

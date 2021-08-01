@@ -48,7 +48,7 @@ int TapeFollower::calculateError()
 
     int reading_left = analogRead(TAPESENSOR_LEFT);
     int reading_right = analogRead(TAPESENSOR_RIGHT);
-    int error = 0;
+    int error = last_error;
 
     if (isTapeReadingValue(reading_left) && isTapeReadingValue(reading_right)){
         error = 0;
