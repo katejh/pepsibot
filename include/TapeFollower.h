@@ -10,6 +10,7 @@ class TapeFollower
         int error;
 
     private:
+        int last_non_zero_error;
         int last_error;
         int total_i;
         int last_error_timesteps;

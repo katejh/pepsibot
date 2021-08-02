@@ -10,6 +10,7 @@ TapeFollower::TapeFollower()
     current_error_timesteps = 0;
     neutral_motor_speed = 200;
     error = 0;
+    last_non_zero_error = 0;
 }
 
 /**
@@ -37,6 +38,7 @@ int TapeFollower::getPidError()
 
     total_i += i;
     last_error = error;
+    if (error != 0) last_non_zero_error = error;
 
     return pid_error;
 }
@@ -64,6 +66,12 @@ int TapeFollower::calculateError()
         error = -3;
     } else if (last_error >= 1) {
         error = 3;
+    } else if (last_non_zero_error < 0){
+        error = 1;
+    } else if (last_non_zero_error > 0) {
+        error = -1;
+    } else {
+        error = -1 * last_non_zero_error;
     }
 
     return error;
