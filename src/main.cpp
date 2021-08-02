@@ -110,7 +110,7 @@ void loop()
     + "\n"
     + "kp:" + analogRead(KP_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
     + "\n"
-    + "speed: " + analogRead(KI_ADJUSTOR)
+    + "sweeper speed: " + analogRead(KI_ADJUSTOR)
     + "\n"
     + "error:" + String(robot.tapeFollower.error)
   );
@@ -120,6 +120,7 @@ void loop()
       break;
     case STATE::DRIVING:
       robot.followTape();
+      robot.sweep(analogRead(KI_ADJUSTOR));
       break;
     case STATE::DROPOFF:
       if (robot.tapeFollower.error == 0) {

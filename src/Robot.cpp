@@ -138,8 +138,6 @@ void Robot::dropOff()
 void Robot::followTape()
 {
     int pid_error = tapeFollower.getPidError();
-    // comment out line below after speed testing is done, and set neutral_speed in Robot.h
-    int neutral_speed = analogRead(KI_ADJUSTOR);
 
     driveLeft(neutral_speed - pid_error);
     driveRight(neutral_speed + pid_error);
