@@ -3,10 +3,6 @@
 #include "Robot.h"
 #include "Pin.h"
 
-#define MOTORFREQ 100
-
-#define FLAPPER_FREQ 200
-
 // display
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -99,7 +95,7 @@ void setup()
   setupDisplay();
 
   // interrupts
-  attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, RISING);
+  //attachInterrupt(digitalPinToInterrupt(RV_COMPARATOR), prototypeReturnVehicleSensing, RISING);
 }
 
 void loop()
@@ -107,12 +103,14 @@ void loop()
   printToDisplay(
     "RV comparator: " + String(digitalRead(RV_COMPARATOR))
     + "\n"
-    + "tape min: " + String(analogRead(TAPE_MIN_ADJUSTOR))
+    + "tape min: " + String(analogRead(TAPE_MIN_ADJUSTOR)/4)
     + "\n"
     + "L:" + String(analogRead(TAPESENSOR_LEFT)) + " R:" + String(analogRead(TAPESENSOR_RIGHT))
     + " RV:" + String(analogRead(TAPESENSOR_RV))
     + "\n"
-    + "kp:" + analogRead(KP_ADJUSTOR) + " ki:" + analogRead(KI_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
+    + "kp:" + analogRead(KP_ADJUSTOR) + " kd:" + analogRead(KD_ADJUSTOR)
+    + "\n"
+    + "speed: " + analogRead(KI_ADJUSTOR)
     + "\n"
     + "error:" + String(robot.tapeFollower.error)
   );

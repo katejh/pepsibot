@@ -12,6 +12,10 @@ TapeFollower::TapeFollower()
     error = 0;
 }
 
+/**
+ * PID algorithm for following tape.
+ * Returns an error according to the whether or not the left and right tape sensors are on the tape.
+ */ 
 int TapeFollower::getPidError()
 {
     error = calculateError();
@@ -22,8 +26,8 @@ int TapeFollower::getPidError()
     current_error_timesteps++;
 
     int k_p = analogRead(KP_ADJUSTOR);
-    int k_i = analogRead(KI_ADJUSTOR) * 100 / 1023; // cap it at 100
-    int k_d = analogRead(KD_ADJUSTOR) * 100 / 1023;
+    int k_i = 0;
+    int k_d = analogRead(KD_ADJUSTOR);
 
     int p = k_p * error;
     int i = k_i * (total_i + error);
@@ -56,10 +60,10 @@ int TapeFollower::calculateError()
         error = -1;
     } else if (isTapeReadingValue(reading_left) && !isTapeReadingValue(reading_right)) {
         error = 1;
-    } else if (last_error == -1 || last_error == -5) {
-        error = -5;
-    } else if (last_error == 1 || last_error == 5) {
-        error = 5;
+    } else if (last_error <= -1) {
+        error = -3;
+    } else if (last_error >= 1) {
+        error = 3;
     }
 
     return error;
@@ -67,7 +71,7 @@ int TapeFollower::calculateError()
 
 bool TapeFollower::isTapeReadingValue(int value)
 {
-    int tape_value_min = analogRead(TAPE_MIN_ADJUSTOR);
+    int tape_value_min = analogRead(TAPE_MIN_ADJUSTOR) / 4;
 
     if (value >= tape_value_min){
         return true;

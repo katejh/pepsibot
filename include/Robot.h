@@ -19,8 +19,8 @@ class Robot
         TapeFollower tapeFollower;
 
     private:
-        static const int neutral_speed = 200;
-        static const int torque_vs_pwm_offset = 150; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
+        static const int neutral_speed = 0;
+        static const int torque_vs_pwm_offset = 0; // offset value to linearize torque vs pwm since function is not exactly linear due to friction
         static const int motor_freq = 100;
         static const int flapper_freq = 1000;
         Servo myServo;
